@@ -4,15 +4,16 @@ using RT.Util;
 using RT.Util.Collections;
 using RT.Util.ExtensionMethods;
 
-namespace Painter;
+namespace OsmapLib.Generator;
 
-public class MapData
+public class PbfConverter
 {
-    public static void Generate(string pbfFilename, string dbPath)
+    public void Convert(string pbfFilename, string dbPath)
     {
         // todo:
         // - ways.dat should be geospatially sorted despite not being geospatially indexed
         // - bsp leaf items can be sorted and diff-encoded. And/or maybe lz4'd?
+        // - nodes in ways.dat should be diff-encoded
 
         Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
         string hash(string val) => MD5.Create().ComputeHash(val.ToUtf8()).ToHex()[..6].ToLower();
@@ -29,11 +30,11 @@ public class MapData
         var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
         long prevWayId = 0;
         long prevRelId = 0;
-        foreach (var el in Utils.ReadPbf(pbfFilename, relsLast: true))
+        foreach (var el in PbfUtil.ReadPbf(pbfFilename, relsLast: true))
         {
             if (el is Node node)
             {
-                var n = latlon2node(node.Latitude.Value, node.Longitude.Value);
+                var n = LatLon.FromDeg(node.Latitude.Value, node.Longitude.Value).Packed;
                 nodes.Add(node.Id.Value, n);
                 foreach (var tag in node.Tags)
                     nodeTags[tag.Key][tag.Value].Add(n);
@@ -47,7 +48,7 @@ public class MapData
                 foreach (var n in way.Nodes)
                 {
                     filestream("", "ways.dat").Write(nodes[n]);
-                    wayAreas[wayId].AddNode(nodes[n]);
+                    wayAreas[wayId].AddLatLon(LatLon.FromPacked(nodes[n]));
                 }
                 foreach (var tag in way.Tags)
                     wayTags[tag.Key][tag.Value].Add(wayId);
@@ -70,7 +71,7 @@ public class MapData
                             bw.Write('N');
                             bw.Write7BitEncodedInt64(relStrings[m.Role]);
                             bw.Write(nodes[m.Id]);
-                            relAreas[relId].AddNode(nodes[m.Id]);
+                            relAreas[relId].AddLatLon(LatLon.FromPacked(nodes[m.Id]));
                         }
                     }
                     else if (m.Type == OsmGeoType.Way)
@@ -115,13 +116,15 @@ public class MapData
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.bsp");
+                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.bsp");
+                        bw.Write(kind.ToUpper().PadRight(4, ' '));
                         saveBsp(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
-                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.bsp");
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.strings"));
+                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.bsp");
+                bw2.Write(kind.ToUpper().PadRight(4, ' '));
+                var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.strings"));
                 saveBsp(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
                     (t, bw) =>
@@ -150,10 +153,10 @@ public class MapData
             (t, lat, lon, mask) => relAreas[t].Overlaps(lat, lon, mask),
             (t, bw) => bw.Write(t));
         saveTags(nodeTags, "node", 16, 0, // 0 because we must reach depth 16 no matter what, because the writer assumes we can reconstruct the top bits of the coordinates
-            (t, lat, lon, mask) => { var (ilat, ilon) = node2ilatlon(t); return (ilat & mask) == lat && (ilon & mask) == lon; },
+            (t, lat, lon, mask) => { var (ilat, ilon) = LatLon.Unpack(t); return (ilat & mask) == lat && (ilon & mask) == lon; },
             (t, bw) =>
             {
-                var (ilat, ilon) = node2ilatlon(t);
+                var (ilat, ilon) = LatLon.Unpack(t);
                 bw.Write((ushort)ilat);
                 bw.Write((ushort)ilon);
             });
@@ -161,99 +164,9 @@ public class MapData
         foreach (var fs in filestreams.Values)
             fs.Dispose();
     }
-
-    public static ulong latlon2node(double lat, double lon)
-    {
-        var ilat = checked((int)Math.Round(lat * 10_000_000));
-        var ilon = checked((int)Math.Round(lon * 10_000_000));
-        return ilatlon2node(ilat, ilon);
-    }
-
-    public static ulong ilatlon2node(int ilat, int ilon)
-    {
-        return ((ulong)(uint)ilat << 32) | (uint)ilon;
-    }
-
-    public static (int lat, int lon) node2ilatlon(ulong node)
-    {
-        int lat = (int)(uint)(node >> 32);
-        int lon = (int)(uint)node;
-        return (lat, lon);
-    }
-
-    static (uint, double, double) latlon2bsp(double lat, double lon)
-    {
-        double latMin = -90;
-        double latMax = 90;
-        double lonMin = -180;
-        double lonMax = 180;
-        uint result = 0;
-        for (int i = 0; i < 16; i++)
-        {
-            double c = (lonMax + lonMin) / 2;
-            if (lon < c)
-                lonMax = c;
-            else
-            {
-                lonMin = c;
-                result |= 1;
-            }
-            result <<= 1;
-            c = (latMax + latMin) / 2;
-            if (lat < c)
-                latMax = c;
-            else
-            {
-                latMin = c;
-                result |= 1;
-            }
-            result <<= 1;
-        }
-        return (result, latMin, lonMin);
-    }
 }
 
-public class RectArea
-{
-    public int LatMin = int.MaxValue, LatMax, LonMin, LonMax;
-
-    public void AddNode(ulong node)
-    {
-        (int lat, int lon) = MapData.node2ilatlon(node);
-        AddLatLon(lat, lon);
-    }
-
-    public void AddLatLon(int ilat, int ilon)
-    {
-        if (LatMin == int.MaxValue)
-        {
-            LatMin = LatMax = ilat;
-            LonMin = LonMax = ilon;
-        }
-        else
-        {
-            LatMin = Math.Min(LatMin, ilat);
-            LatMax = Math.Max(LatMax, ilat);
-            LonMin = Math.Min(LonMin, ilon);
-            LonMax = Math.Max(LonMax, ilon);
-        }
-    }
-
-    public void AddArea(RectArea area)
-    {
-        AddLatLon(area.LatMin, area.LonMin);
-        AddLatLon(area.LatMax, area.LonMax);
-    }
-
-    public bool Overlaps(int lat, int lon, int mask)
-    {
-        var latMX = lat + ~mask;
-        var lonMX = lon + ~mask;
-        return (lon <= LonMax) && (lonMX >= LonMin) && (lat <= LatMax) && (latMX >= LatMin);
-    }
-}
-
-public class StringsCacher
+internal class StringsCacher
 {
     private Dictionary<string, long> _map = new Dictionary<string, long>();
     private Func<BinaryWriter> _getWriter;
@@ -271,78 +184,14 @@ public class StringsCacher
             if (_map.TryGetValue(value, out long result))
                 return result;
             if (_bwStrings == null)
+            {
                 _bwStrings = _getWriter();
+                _bwStrings.Write("STRN".ToCharArray());
+            }
             result = _bwStrings.BaseStream.Position;
             _bwStrings.Write(value);
             _map.Add(value, result);
             return result;
         }
-    }
-}
-
-public class BspWriter<T>
-{
-    public BspWriter(BinaryWriter bw, int depthLimit, int itemsCountLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter> write)
-    {
-        _bw = bw;
-        _depthLimit = depthLimit;
-        _itemsCountLimit = itemsCountLimit;
-        _filter = filter;
-        _write = write;
-    }
-
-    private BinaryWriter _bw;
-    private int _depthLimit;
-    private int _itemsCountLimit;
-    private Func<T, int, int, int, bool> _filter;
-    private Action<T, BinaryWriter> _write;
-
-    public void SaveBsp(List<T> items)
-    {
-        saveBsp(items, 0, 0, 0);
-    }
-
-    private void saveBsp(List<T> items, int depth, int latBits, int lonBits)
-    {
-        var mask = ~((1 << (32 - depth)) - 1);
-        if (depth > 0)
-        {
-            int lat = latBits << (32 - depth);
-            int lon = lonBits << (32 - depth);
-            items = items.Where(t => _filter(t, lat, lon, mask)).ToList();
-        }
-        if (depth == _depthLimit || items.Count == 0 || items.Count < _itemsCountLimit)
-        {
-            if (depth != _depthLimit)
-                _bw.Write(uint.MaxValue); // marker of early exit from depth recursion
-            _bw.Write7BitEncodedInt(items.Count);
-            foreach (var item in items)
-                _write(item, _bw);
-            return;
-        }
-
-        depth++;
-        mask = ~((1 << (32 - depth)) - 1);
-        latBits <<= 1;
-        lonBits <<= 1;
-
-        var backpatch = _bw.BaseStream.Position;
-        _bw.Write(0); // 01
-        _bw.Write(0); // 10
-        _bw.Write(0); // 11
-
-        saveBsp(items, depth, latBits, lonBits);
-        _bw.BaseStream.Position = backpatch;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
-        saveBsp(items, depth, latBits, lonBits | 1);
-        _bw.BaseStream.Position = backpatch + 4;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
-        saveBsp(items, depth, latBits | 1, lonBits);
-        _bw.BaseStream.Position = backpatch + 8;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
-        saveBsp(items, depth, latBits | 1, lonBits | 1);
     }
 }

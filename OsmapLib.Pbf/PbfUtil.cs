@@ -2,23 +2,10 @@
 using OsmSharp;
 using OsmSharp.Streams;
 using OsmSharp.Tags;
-using SkiaSharp;
 
-static class ExtensionMethods
-{
-    public static void WriteValue<T>(this BinaryWriter bw, T value)
-    {
-        // this is SLOW; fixme
-        if (typeof(T) == typeof(uint))
-            bw.Write((uint)(object)value);
-        else if (typeof(T) == typeof(ulong))
-            bw.Write((ulong)(object)value);
-        else
-            throw new Exception();
-    }
-}
+namespace OsmapLib.Generator;
 
-public static class Utils
+public static class PbfUtil
 {
     public static IEnumerable<OsmGeo> ReadPbf(string pbfFilename, bool relsLast = false)
     {
