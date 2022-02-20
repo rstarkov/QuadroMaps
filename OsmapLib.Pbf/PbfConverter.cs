@@ -30,6 +30,12 @@ public class PbfConverter
         var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
         long prevWayId = 0;
         long prevRelId = 0;
+        var bwWays = filestream("", "ways.dat");
+        var bwWaysId = filestream("", "ways.id.dat");
+        var bwWaysOsmId = filestream("", "ways.osm_id.dat");
+        var bwRels = filestream("", "rels.dat");
+        var bwRelsId = filestream("", "rels.id.dat");
+        var bwRelsOsmId = filestream("", "rels.osm_id.dat");
         foreach (var el in PbfUtil.ReadPbf(pbfFilename, relsLast: true))
         {
             if (el is Node node)
@@ -43,34 +49,33 @@ public class PbfConverter
             {
                 var wayId = (uint)(wayRenumber.Count + 1);
                 wayRenumber.Add(way.Id.Value, wayId);
-                filestream("", "ways.id.dat").Write7BitEncodedInt64(filestream("", "ways.dat").Position); // to be loaded into RAM during usage
-                filestream("", "ways.dat").Write7BitEncodedInt(way.Nodes.Length);
+                bwWaysId.Write7BitEncodedInt64(bwWays.Position); // to be loaded into RAM during usage
+                bwWays.Write7BitEncodedInt(way.Nodes.Length);
                 foreach (var n in way.Nodes)
                 {
-                    filestream("", "ways.dat").Write(nodes[n]);
+                    bwWays.Write(nodes[n]);
                     wayAreas[wayId].AddLatLon(LatLon.FromPacked(nodes[n]));
                 }
                 foreach (var tag in way.Tags)
                     wayTags[tag.Key][tag.Value].Add(wayId);
-                filestream("", "ways.osm_id.dat").Write7BitEncodedInt64(way.Id.Value - prevWayId);
+                bwWaysOsmId.Write7BitEncodedInt64(way.Id.Value - prevWayId);
                 prevWayId = way.Id.Value;
             }
             else if (el is Relation rel)
             {
                 var relId = (uint)(relRenumber.Count + 1);
                 relRenumber.Add(rel.Id.Value, relId);
-                var bw = filestream("", "rels.dat");
-                filestream("", "rels.id.dat").Write7BitEncodedInt64(bw.Position); // to be loaded into RAM during usage
-                bw.Write7BitEncodedInt(rel.Members.Length);
+                bwRelsId.Write7BitEncodedInt64(bwRels.Position); // to be loaded into RAM during usage
+                bwRels.Write7BitEncodedInt(rel.Members.Length);
                 foreach (var m in rel.Members)
                 {
                     if (m.Type == OsmGeoType.Node)
                     {
                         if (nodes.ContainsKey(m.Id)) // area-limited pbf dumps include relations with nodes that have been trimmed as out of area
                         {
-                            bw.Write('N');
-                            bw.Write7BitEncodedInt64(relStrings[m.Role]);
-                            bw.Write(nodes[m.Id]);
+                            bwRels.Write('N');
+                            bwRels.Write7BitEncodedInt64(relStrings[m.Role]);
+                            bwRels.Write(nodes[m.Id]);
                             relAreas[relId].AddLatLon(LatLon.FromPacked(nodes[m.Id]));
                         }
                     }
@@ -78,9 +83,9 @@ public class PbfConverter
                     {
                         if (wayRenumber.ContainsKey(m.Id)) // area-limited pbf dumps include relations with ways that have been trimmed as out of area
                         {
-                            bw.Write('W');
-                            bw.Write7BitEncodedInt64(relStrings[m.Role]);
-                            bw.Write7BitEncodedInt((int)wayRenumber[m.Id]);
+                            bwRels.Write('W');
+                            bwRels.Write7BitEncodedInt64(relStrings[m.Role]);
+                            bwRels.Write7BitEncodedInt((int)wayRenumber[m.Id]);
                             relAreas[relId].AddArea(wayAreas[wayRenumber[m.Id]]);
                         }
                     }
@@ -88,9 +93,9 @@ public class PbfConverter
                     {
                         if (relRenumber.ContainsKey(m.Id)) // area-limited pbf dumps include relations with sub-relations that have been trimmed as out of area
                         {
-                            bw.Write('R');
-                            bw.Write7BitEncodedInt64(relStrings[m.Role]);
-                            bw.Write7BitEncodedInt((int)relRenumber[m.Id]);
+                            bwRels.Write('R');
+                            bwRels.Write7BitEncodedInt64(relStrings[m.Role]);
+                            bwRels.Write7BitEncodedInt((int)relRenumber[m.Id]);
                             relAreas[relId].AddArea(relAreas[relRenumber[m.Id]]);
                         }
                     }
@@ -99,7 +104,7 @@ public class PbfConverter
                 }
                 foreach (var tag in rel.Tags)
                     relTags[tag.Key][tag.Value].Add(relId);
-                filestream("", "rels.osm_id.dat").Write7BitEncodedInt64(rel.Id.Value - prevRelId);
+                bwRelsOsmId.Write7BitEncodedInt64(rel.Id.Value - prevRelId);
                 prevRelId = rel.Id.Value;
             }
         }
