@@ -1,4 +1,4 @@
-﻿namespace OsmapLib;
+namespace OsmapLib;
 
 public sealed class BinaryWriter2 : BinaryWriter
 {
@@ -30,5 +30,24 @@ public static class ExtensionMethods
             value >>= 7;
         }
         bw.Write((byte)(value & 127));
+    }
+
+    public static long Read7BitEncodedSignedInt64(this BinaryReader br)
+    {
+        // from RT.Util ReadInt64Optim
+        byte b;
+        int shifts = 0;
+        long res = 0;
+        do
+        {
+            b = br.ReadByte();
+            res |= ((long)(b & 127) << shifts);
+            shifts += 7;
+        } while (b > 127);
+        // Sign-extend
+        if (shifts >= 64) // can only be 63 or 70
+            return res;
+        shifts = 64 - shifts;
+        return (res << shifts) >> shifts;
     }
 }

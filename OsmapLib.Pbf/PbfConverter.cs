@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using OsmSharp;
 using RT.Util;
 using RT.Util.Collections;
@@ -28,8 +28,8 @@ public class PbfConverter
         var wayAreas = new AutoDictionary<uint, RectArea>(_ => new RectArea());
         var relAreas = new AutoDictionary<uint, RectArea>(_ => new RectArea());
         var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
-        long prevWayId = 0;
-        long prevRelId = 0;
+        long prevWayId = 0, prevWayIdPos = 0;
+        long prevRelId = 0, prevRelIdPos = 0;
         var bwWays = filestream("", "ways.dat");
         var bwWaysId = filestream("", "ways.id.dat");
         var bwWaysOsmId = filestream("", "ways.osm_id.dat");
@@ -49,12 +49,24 @@ public class PbfConverter
             {
                 var wayId = (uint)(wayRenumber.Count + 1);
                 wayRenumber.Add(way.Id.Value, wayId);
-                bwWaysId.Write7BitEncodedInt64(bwWays.Position); // to be loaded into RAM during usage
+                bwWaysId.Write7BitEncodedInt64(bwWays.Position - prevWayIdPos); // to be loaded into RAM during usage
+                prevWayIdPos = bwWays.Position;
                 bwWays.Write7BitEncodedInt(way.Nodes.Length);
-                foreach (var n in way.Nodes)
+                int prevLat = 0, prevLon = 0;
+                for (int i = 0; i < way.Nodes.Length; i++)
                 {
-                    bwWays.Write(nodes[n]);
-                    wayAreas[wayId].AddLatLon(LatLon.FromPacked(nodes[n]));
+                    var n = nodes[way.Nodes[i]];
+                    var ll = LatLon.FromPacked(n);
+                    if (i == 0)
+                        bwWays.Write(n);
+                    else
+                    {
+                        bwWays.Write7BitEncodedSignedInt(ll.ILat - prevLat);
+                        bwWays.Write7BitEncodedSignedInt(ll.ILon - prevLon);
+                    }
+                    prevLat = ll.ILat;
+                    prevLon = ll.ILon;
+                    wayAreas[wayId].AddLatLon(ll);
                 }
                 foreach (var tag in way.Tags)
                     wayTags[tag.Key][tag.Value].Add(wayId);
@@ -65,7 +77,8 @@ public class PbfConverter
             {
                 var relId = (uint)(relRenumber.Count + 1);
                 relRenumber.Add(rel.Id.Value, relId);
-                bwRelsId.Write7BitEncodedInt64(bwRels.Position); // to be loaded into RAM during usage
+                bwRelsId.Write7BitEncodedInt64(bwRels.Position - prevRelIdPos); // to be loaded into RAM during usage
+                prevRelIdPos = bwRels.Position;
                 bwRels.Write7BitEncodedInt(rel.Members.Length);
                 foreach (var m in rel.Members)
                 {
