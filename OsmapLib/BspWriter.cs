@@ -2,7 +2,7 @@
 
 public class BspWriter<T>
 {
-    public BspWriter(BinaryWriter bw, int depthLimit, int itemsCountLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter> write)
+    public BspWriter(BinaryWriter2 bw, int depthLimit, int itemsCountLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> write)
     {
         _bw = bw;
         _depthLimit = depthLimit;
@@ -11,11 +11,11 @@ public class BspWriter<T>
         _write = write;
     }
 
-    private BinaryWriter _bw;
+    private BinaryWriter2 _bw;
     private int _depthLimit;
     private int _itemsCountLimit;
     private Func<T, int, int, int, bool> _filter;
-    private Action<T, BinaryWriter> _write;
+    private Action<T, BinaryWriter2> _write;
 
     public void SaveBsp(List<T> items)
     {
@@ -46,23 +46,23 @@ public class BspWriter<T>
         latBits <<= 1;
         lonBits <<= 1;
 
-        var backpatch = _bw.BaseStream.Position;
+        var backpatch = _bw.Position;
         _bw.Write(0); // 01
         _bw.Write(0); // 10
         _bw.Write(0); // 11
 
         saveBsp(items, depth, latBits, lonBits);
-        _bw.BaseStream.Position = backpatch;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
+        _bw.Position = backpatch;
+        _bw.Write(checked((uint)_bw.Length));
+        _bw.Position = _bw.Length;
         saveBsp(items, depth, latBits, lonBits | 1);
-        _bw.BaseStream.Position = backpatch + 4;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
+        _bw.Position = backpatch + 4;
+        _bw.Write(checked((uint)_bw.Length));
+        _bw.Position = _bw.Length;
         saveBsp(items, depth, latBits | 1, lonBits);
-        _bw.BaseStream.Position = backpatch + 8;
-        _bw.Write(checked((uint)_bw.BaseStream.Length));
-        _bw.BaseStream.Position = _bw.BaseStream.Length;
+        _bw.Position = backpatch + 8;
+        _bw.Write(checked((uint)_bw.Length));
+        _bw.Position = _bw.Length;
         saveBsp(items, depth, latBits | 1, lonBits | 1);
     }
 }

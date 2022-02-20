@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using OsmSharp;
 using RT.Util;
 using RT.Util.Collections;
@@ -17,8 +17,8 @@ public class PbfConverter
 
         Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
         string hash(string val) => MD5.Create().ComputeHash(val.ToUtf8()).ToHex()[..6].ToLower();
-        var filestreams = new AutoDictionary<string, BinaryWriter>(fname => new BinaryWriter(openfile(fname)));
-        BinaryWriter filestream(string path, string name) => filestreams[Path.Combine(dbPath.Concat(path.Split(':').Select(s => s.FilenameCharactersEscape())).Concat(PathUtil.AppendBeforeExtension(name, "." + hash(Path.GetFileNameWithoutExtension(name))).FilenameCharactersEscape()).ToArray())];
+        var filestreams = new AutoDictionary<string, BinaryWriter2>(fname => new BinaryWriter2(openfile(fname)));
+        BinaryWriter2 filestream(string path, string name) => filestreams[Path.Combine(dbPath.Concat(path.Split(':').Select(s => s.FilenameCharactersEscape())).Concat(PathUtil.AppendBeforeExtension(name, "." + hash(Path.GetFileNameWithoutExtension(name))).FilenameCharactersEscape()).ToArray())];
         var nodes = new Dictionary<long, ulong>();
         var wayRenumber = new Dictionary<long, uint>();
         var relRenumber = new Dictionary<long, uint>();
@@ -43,7 +43,7 @@ public class PbfConverter
             {
                 var wayId = (uint)(wayRenumber.Count + 1);
                 wayRenumber.Add(way.Id.Value, wayId);
-                filestream("", "ways.id.dat").Write7BitEncodedInt64(filestream("", "ways.dat").BaseStream.Position); // to be loaded into RAM during usage
+                filestream("", "ways.id.dat").Write7BitEncodedInt64(filestream("", "ways.dat").Position); // to be loaded into RAM during usage
                 filestream("", "ways.dat").Write7BitEncodedInt(way.Nodes.Length);
                 foreach (var n in way.Nodes)
                 {
@@ -60,7 +60,7 @@ public class PbfConverter
                 var relId = (uint)(relRenumber.Count + 1);
                 relRenumber.Add(rel.Id.Value, relId);
                 var bw = filestream("", "rels.dat");
-                filestream("", "rels.id.dat").Write7BitEncodedInt64(bw.BaseStream.Position); // to be loaded into RAM during usage
+                filestream("", "rels.id.dat").Write7BitEncodedInt64(bw.Position); // to be loaded into RAM during usage
                 bw.Write7BitEncodedInt(rel.Members.Length);
                 foreach (var m in rel.Members)
                 {
@@ -103,9 +103,9 @@ public class PbfConverter
                 prevRelId = rel.Id.Value;
             }
         }
-        void saveBsp<T>(BinaryWriter bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter> writer)
+        void saveBsp<T>(BinaryWriter2 bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
             => new BspWriter<T>(bw, depthLimit, itemsLimit, filter, writer).SaveBsp(items);
-        void saveTags<T>(AutoDictionary<string, string, List<T>> tags, string kind, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter> writer)
+        void saveTags<T>(AutoDictionary<string, string, List<T>> tags, string kind, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
         {
             foreach (var tagKey in tags.Keys)
             {
@@ -169,10 +169,10 @@ public class PbfConverter
 internal class StringsCacher
 {
     private Dictionary<string, long> _map = new Dictionary<string, long>();
-    private Func<BinaryWriter> _getWriter;
-    private BinaryWriter _bwStrings;
+    private Func<BinaryWriter2> _getWriter;
+    private BinaryWriter2 _bwStrings;
 
-    public StringsCacher(Func<BinaryWriter> getWriter)
+    public StringsCacher(Func<BinaryWriter2> getWriter)
     {
         _getWriter = getWriter;
     }
@@ -188,7 +188,7 @@ internal class StringsCacher
                 _bwStrings = _getWriter();
                 _bwStrings.Write("STRN".ToCharArray());
             }
-            result = _bwStrings.BaseStream.Position;
+            result = _bwStrings.Position;
             _bwStrings.Write(value);
             _map.Add(value, result);
             return result;
