@@ -1,4 +1,6 @@
-﻿namespace OsmapLib;
+﻿using System.Text.RegularExpressions;
+
+namespace OsmapLib;
 
 public class NodeTagset
 {
@@ -21,7 +23,14 @@ public class MapReader
     public MapReader(string dbPath)
     {
         DbPath = dbPath;
-        var files = Directory.GetFiles(dbPath, "*.*", SearchOption.AllDirectories);
+        foreach (var file in new DirectoryInfo(dbPath).GetFiles("*.*", SearchOption.AllDirectories))
+        {
+            Match match;
+            if ((match = Regex.Match(file.FullName.UnescapeFilename(), @"^node\.tag\.(?<tagname>[^=]*)=(?<tagvalue>[^=]*)\.(?<count>\d+)\.[0-9a-f]+\.bsp$")).Success)
+            {
+                _nodeTags[match.Groups["tagname"].Value].ValueReaders[match.Groups["tagvalue"].Value] = new NodeTagsBspReader(file.FullName, null, match.Groups["tagvalue"].Value);
+            }
+        }
     }
 
     public class Polyline

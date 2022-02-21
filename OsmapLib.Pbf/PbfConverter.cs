@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using OsmSharp;
 using RT.Util;
 using RT.Util.Collections;
@@ -18,7 +18,7 @@ public class PbfConverter
         Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
         string hash(string val) => MD5.Create().ComputeHash(val.ToUtf8()).ToHex()[..6].ToLower();
         var filestreams = new AutoDictionary<string, BinaryWriter2>(fname => new BinaryWriter2(openfile(fname)));
-        BinaryWriter2 filestream(string path, string name) => filestreams[Path.Combine(dbPath.Concat(path.Split(':').Select(s => s.FilenameCharactersEscape())).Concat(PathUtil.AppendBeforeExtension(name, "." + hash(Path.GetFileNameWithoutExtension(name))).FilenameCharactersEscape()).ToArray())];
+        BinaryWriter2 filestream(string path, string name) => filestreams[Path.Combine(dbPath.Concat(path.Split(':').Select(s => s.EscapeFilename())).Concat(PathUtil.AppendBeforeExtension(name, "." + hash(Path.GetFileNameWithoutExtension(name))).FilenameCharactersEscape()).ToArray())];
         var nodes = new Dictionary<long, ulong>();
         var wayRenumber = new Dictionary<long, uint>();
         var relRenumber = new Dictionary<long, uint>();
