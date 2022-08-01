@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using OsmSharp;
 using RT.Util;
 using RT.Util.Collections;
@@ -135,7 +135,7 @@ public class PbfConverter
                     else
                     {
                         var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.bsp");
-                        bw.Write(kind.ToUpper().PadRight(4, ' '));
+                        bw.Write(kind.ToUpper().PadRight(4, ' ')); // TODO: remove length and write as bytes
                         saveBsp(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }

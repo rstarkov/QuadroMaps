@@ -26,6 +26,7 @@ public abstract class BspReader<T>
     }
 
     protected virtual BspReaderContext StartRead() { return new BspReaderContext(); }
+    protected virtual void ReadHeader(BspReaderContext c) { }
     protected abstract T ReadItem(BspReaderContext c);
 
     public IEnumerable<T> ReadArea(RectArea area)
@@ -35,11 +36,13 @@ public abstract class BspReader<T>
         using var ctx = StartRead();
         ctx.Reader = br;
 
+        ReadHeader(ctx);
+
         var (latRangeBits, latRangeMask) = area.SameBitsLat;
         var (lonRangeBits, lonRangeMask) = area.SameBitsLon;
 
         var state = new Stack<(int depth, int latBits, int lonBits, long pos)>();
-        state.Push((0, 0, 0, 0));
+        state.Push((0, 0, 0, br.BaseStream.Position));
         while (state.Count > 0)
         {
             var (depth, latBits, lonBits, pos) = state.Pop();
@@ -93,6 +96,11 @@ public class NodeTagsBspReader : BspReader<NodeTagsBspReader.Entry>
     {
         _stringsFilename = stringsFilename;
         _tagValue = tagValue;
+    }
+
+    protected override void ReadHeader(BspReaderContext c)
+    {
+        var header = c.Reader.ReadBytes(5);
     }
 
     protected override Entry ReadItem(BspReaderContext c)
