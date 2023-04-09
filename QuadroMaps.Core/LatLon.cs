@@ -1,9 +1,9 @@
 ﻿namespace QuadroMaps.Core;
 
-public struct LatLon
+public record struct LatLon
 {
-    public int ILat { get; private set; }
-    public int ILon { get; private set; }
+    public int ILat { get; init; }
+    public int ILon { get; init; }
     public double Lat => ILat / 10_000_000.0;
     public double Lon => ILon / 10_000_000.0;
     public ulong Packed => Pack(ILat, ILon);

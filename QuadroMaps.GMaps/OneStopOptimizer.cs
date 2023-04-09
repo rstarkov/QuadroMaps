@@ -1,41 +1,39 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
+﻿using Newtonsoft.Json.Linq;
+using QuadroMaps.Core;
 using RT.KitchenSink.Geometry;
 using RT.Util;
 using RT.Util.ExtensionMethods;
 using RT.Util.Geometry;
 
-class OneStopSample
+namespace QuadroMaps.GMaps;
+
+public class OneStopSample
 {
-    public Pt Point;
+    public LatLon Point;
     public double Time1;
     public double Time2;
     public double TotalTime => Time1 + Time2;
 }
 
-class OneStopOptimizer
+public class OneStopOptimizer
 {
     public string ApiKey;
 
-    public Pt Origin1, Origin2;
+    public LatLon Origin1, Origin2;
     public string Options1, Options2;
     public bool Leaving1, Leaving2; // true = leaving origin, false = arriving at origin
 
     public List<OneStopSample> Samples = new List<OneStopSample>();
 
-    public void Grid(float radius, Pt pt1, Pt pt2)
+    public void Grid(float radius, LatLon pt1, LatLon pt2)
     {
         var latMin = Math.Min(pt1.Lat, pt2.Lat) + radius * 1.1f;
         var latMax = Math.Max(pt1.Lat, pt2.Lat) - radius * 1.1f;
         var lonMin = Math.Min(pt1.Lon, pt2.Lon) + radius * 1.1f;
         var lonMax = Math.Max(pt1.Lon, pt2.Lon) - radius * 1.1f;
 
-        var toQuery = new List<Pt>();
-        void addQuery(Pt? point)
+        var toQuery = new List<LatLon>();
+        void addQuery(LatLon? point)
         {
             if (point != null)
                 toQuery.Add(point.Value);
@@ -49,8 +47,8 @@ class OneStopOptimizer
         for (var lat = latMin; lat <= latMax; lat += radius * 0.7f)
             for (var lon = lonMin; lon <= lonMax; lon += radius * 0.7f)
             {
-                var pt = new Pt((float)Rnd.NextDouble(lat - radius, lat + radius), (float)Rnd.NextDouble(lon - radius, lon + radius));
-                if (!Samples.Select(s => s.Point).Concat(toQuery).Any(p => p.AngDist(pt) < radius))
+                var pt = LatLon.FromDeg(Rnd.NextDouble(lat - radius, lat + radius), Rnd.NextDouble(lon - radius, lon + radius));
+                if (!Samples.Select(s => s.Point).Concat(toQuery).Any(p => p.WrongAngDist(pt) < radius))
                     addQuery(pt);
             }
         addQuery(null);
@@ -66,15 +64,15 @@ class OneStopOptimizer
         var largest = vd.Edges
             .Select(e => (e, p1: pts[sites[e.siteA]], p2: pts[sites[e.siteB]]))
             .OrderByDescending(x => Math.Abs(x.p1.TotalTime - x.p2.TotalTime))
-            .Where(x => x.p1.Point.AngDist(x.p2.Point) >= 2 * radius)
+            .Where(x => x.p1.Point.WrongAngDist(x.p2.Point) >= 2 * radius)
             .Take(count).ToList();
-        var points = largest.Select(x => new Pt { Lat = (x.p1.Point.Lat + x.p2.Point.Lat) / 2 + (float)Rnd.NextDouble(-radius / 5, radius / 5), Lon = (x.p1.Point.Lon + x.p2.Point.Lon) / 2 + (float)Rnd.NextDouble(-radius / 5, radius / 5) }).ToList();
+        var points = largest.Select(x => LatLon.FromDeg(lat: (x.p1.Point.Lat + x.p2.Point.Lat) / 2 + Rnd.NextDouble(-radius / 5, radius / 5), lon: (x.p1.Point.Lon + x.p2.Point.Lon) / 2 + Rnd.NextDouble(-radius / 5, radius / 5))).ToList();
         Query(points);
     }
 
-    private HttpClient _hc = new HttpClient();
+    private HttpClient _hc = new();
 
-    public void Query(List<Pt> points)
+    public void Query(List<LatLon> points)
     {
         if (points.Count == 0)
             return;

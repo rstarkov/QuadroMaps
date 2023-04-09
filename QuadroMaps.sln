@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuadroMaps.Core", "QuadroMa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuadroMaps.Pbf", "QuadroMaps.Pbf\QuadroMaps.Pbf.csproj", "{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuadroMaps.GMaps", "QuadroMaps.GMaps\QuadroMaps.GMaps.csproj", "{5A3B81E0-A05F-4977-A08B-160543583B64}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A3B81E0-A05F-4977-A08B-160543583B64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A3B81E0-A05F-4977-A08B-160543583B64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A3B81E0-A05F-4977-A08B-160543583B64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A3B81E0-A05F-4977-A08B-160543583B64}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
