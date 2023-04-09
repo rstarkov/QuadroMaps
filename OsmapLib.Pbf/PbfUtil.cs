@@ -9,6 +9,7 @@ public static class PbfUtil
 {
     public static IEnumerable<OsmGeo> ReadPbf(string pbfFilename, bool relsLast = false)
     {
+        Console.WriteLine("ReadPbf: reading rels...");
         if (relsLast)
         {
             foreach (var item in pbfInner(pbfFilename))
@@ -66,6 +67,7 @@ public static class PbfUtil
                 yield return rel;
             }
         }
+        Console.WriteLine("ReadPbf: reading rest of pbf...");
         foreach (var item in pbfInner(pbfFilename))
             if (item is not Relation)
                 yield return item;
@@ -80,7 +82,7 @@ public static class PbfUtil
             yield return item;
             if ((DateTime.UtcNow - last) > TimeSpan.FromSeconds(1))
             {
-                Console.WriteLine($"Processed {pbfStream.Position:#,0} of {pbfStream.Length:#,0} bytes ({pbfStream.Position * 100.0 / pbfStream.Length:0.0}%)");
+                Console.WriteLine($"ReadPbf: processed {pbfStream.Position:#,0} of {pbfStream.Length:#,0} bytes ({pbfStream.Position * 100.0 / pbfStream.Length:0.0}%)");
                 last = DateTime.UtcNow;
             }
         }
