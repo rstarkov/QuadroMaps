@@ -1,6 +1,6 @@
 ﻿using System.Collections.Concurrent;
 
-namespace OsmapLib;
+namespace QuadroMaps.Core;
 
 public class BspReaderContext : IDisposable
 {

@@ -3,7 +3,7 @@ using OsmSharp;
 using OsmSharp.Streams;
 using OsmSharp.Tags;
 
-namespace OsmapLib.Generator;
+namespace QuadroMaps.Pbf;
 
 public static class PbfUtil
 {

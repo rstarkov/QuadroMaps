@@ -1,6 +1,6 @@
 ﻿using System.Text;
 
-namespace OsmapLib;
+namespace QuadroMaps.Core;
 
 public sealed class BinaryWriter2 : BinaryWriter
 {

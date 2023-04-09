@@ -1,10 +1,11 @@
 ﻿using System.Security.Cryptography;
 using OsmSharp;
+using QuadroMaps.Core;
 using RT.Util;
 using RT.Util.Collections;
 using RT.Util.ExtensionMethods;
 
-namespace OsmapLib.Generator;
+namespace QuadroMaps.Pbf;
 
 public class PbfConverter
 {

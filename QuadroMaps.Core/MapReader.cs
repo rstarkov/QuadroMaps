@@ -1,6 +1,6 @@
 ﻿using System.Text.RegularExpressions;
 
-namespace OsmapLib;
+namespace QuadroMaps.Core;
 
 public class NodeTagset
 {

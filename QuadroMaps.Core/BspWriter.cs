@@ -1,4 +1,4 @@
-﻿namespace OsmapLib;
+﻿namespace QuadroMaps.Core;
 
 public class BspWriter<T>
 {

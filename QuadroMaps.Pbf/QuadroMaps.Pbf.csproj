@@ -13,7 +13,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\OsmapLib\OsmapLib.csproj" />
+    <ProjectReference Include="..\QuadroMaps.Core\QuadroMaps.Core.csproj" />
   </ItemGroup>
 
 </Project>

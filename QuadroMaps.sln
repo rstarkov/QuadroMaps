@@ -3,13 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Painter", "Painter\Painter.csproj", "{32F42C1E-4AF9-4751-9942-89ED9682154C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuadroMaps.Core", "QuadroMaps.Core\QuadroMaps.Core.csproj", "{0B972C8D-D560-4574-A535-50A0282E68FD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Seekers", "..\..\Seekers\Seekers\Seekers.csproj", "{111AB8AC-4384-4DA4-B7B5-1BB6523CFFCD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OsmapLib", "OsmapLib\OsmapLib.csproj", "{1631FE6F-9C8A-4F4C-898C-2ACF6669001D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OsmapLib.Pbf", "OsmapLib.Pbf\OsmapLib.Pbf.csproj", "{364DD66D-61FA-479D-8B77-2B34608083CF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "QuadroMaps.Pbf", "QuadroMaps.Pbf\QuadroMaps.Pbf.csproj", "{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,22 +13,14 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{32F42C1E-4AF9-4751-9942-89ED9682154C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{32F42C1E-4AF9-4751-9942-89ED9682154C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{32F42C1E-4AF9-4751-9942-89ED9682154C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{32F42C1E-4AF9-4751-9942-89ED9682154C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{111AB8AC-4384-4DA4-B7B5-1BB6523CFFCD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{111AB8AC-4384-4DA4-B7B5-1BB6523CFFCD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{111AB8AC-4384-4DA4-B7B5-1BB6523CFFCD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{111AB8AC-4384-4DA4-B7B5-1BB6523CFFCD}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1631FE6F-9C8A-4F4C-898C-2ACF6669001D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1631FE6F-9C8A-4F4C-898C-2ACF6669001D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1631FE6F-9C8A-4F4C-898C-2ACF6669001D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1631FE6F-9C8A-4F4C-898C-2ACF6669001D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{364DD66D-61FA-479D-8B77-2B34608083CF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{364DD66D-61FA-479D-8B77-2B34608083CF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{364DD66D-61FA-479D-8B77-2B34608083CF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{364DD66D-61FA-479D-8B77-2B34608083CF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0B972C8D-D560-4574-A535-50A0282E68FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0B972C8D-D560-4574-A535-50A0282E68FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0B972C8D-D560-4574-A535-50A0282E68FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0B972C8D-D560-4574-A535-50A0282E68FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D2A1E19-4ECE-4E66-B0E5-97DD15E2B05A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
