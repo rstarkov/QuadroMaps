@@ -13,7 +13,7 @@ public class PbfConverter
     {
         // todo:
         // - ways.dat should be geospatially sorted despite not being geospatially indexed
-        // - bsp leaf items can be sorted and diff-encoded. And/or maybe lz4'd?
+        // - quadtree leaf items can be sorted and diff-encoded. And/or maybe lz4'd?
         // - nodes in ways.dat should be diff-encoded
 
         Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
@@ -122,8 +122,8 @@ public class PbfConverter
                 prevRelId = rel.Id.Value;
             }
         }
-        void saveBsp<T>(BinaryWriter2 bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
-            => new BspWriter<T>(bw, depthLimit, itemsLimit, filter, writer).SaveBsp(items);
+        void saveQuadtree<T>(BinaryWriter2 bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
+            => new QuadtreeWriter<T>(bw, depthLimit, itemsLimit, filter, writer).WriteQuadtree(items);
         void saveTags<T>(AutoDictionary<string, string, List<T>> tags, string kind, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
         {
             foreach (var tagKey in tags.Keys)
@@ -135,16 +135,16 @@ public class PbfConverter
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.bsp");
+                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.qtr");
                         bw.Write(kind.ToUpper().PadRight(4, ' ')); // TODO: remove length and write as bytes
-                        saveBsp(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
+                        saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.bsp");
-                bw2.Write(kind.ToUpper().PadRight(4, ' '));
+                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.qtr");
+                bw2.Write(kind.ToUpper().PadRight(4, ' ')); // TODO: remove length and write as bytes
                 var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.strings"));
-                saveBsp(bw2, remainingTags, depthLimit, itemsLimit,
+                saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
                     (t, bw) =>
                     {
@@ -156,7 +156,7 @@ public class PbfConverter
                     });
             }
         }
-        //saveBsp(filestream("", "node.osm_ids.bsp"), nodes.ToList(), 16, 0,
+        //saveQuadtree(filestream("", "node.osm_ids.qtr"), nodes.ToList(), 16, 0,
         //    (t, lat, lon, mask) => { var (ilat, ilon) = node2ilatlon(t.Value); return (ilat & mask) == lat && (ilon & mask) == lon; },
         //    (t, bw) =>
         //    {

@@ -2,7 +2,7 @@
 
 namespace QuadroMaps.Core;
 
-public class BspReaderContext : IDisposable
+public class QuadtreeReaderContext : IDisposable
 {
     public BinaryReader Reader;
     public BinaryReader StringsReader;
@@ -14,20 +14,20 @@ public class BspReaderContext : IDisposable
     }
 }
 
-public abstract class BspReader<T>
+public abstract class QuadtreeReader<T>
 {
     private string _filename;
     private int _depthLimit;
 
-    public BspReader(string filename, int depthLimit)
+    public QuadtreeReader(string filename, int depthLimit)
     {
         _filename = filename;
         _depthLimit = depthLimit;
     }
 
-    protected virtual BspReaderContext StartRead() { return new BspReaderContext(); }
-    protected virtual void ReadHeader(BspReaderContext c) { }
-    protected abstract T ReadItem(BspReaderContext c);
+    protected virtual QuadtreeReaderContext StartRead() { return new QuadtreeReaderContext(); }
+    protected virtual void ReadHeader(QuadtreeReaderContext c) { }
+    protected abstract T ReadItem(QuadtreeReaderContext c);
 
     public IEnumerable<T> ReadArea(LatLonRect area)
     {
@@ -80,7 +80,7 @@ public abstract class BspReader<T>
     }
 }
 
-public class NodeTagsBspReader : BspReader<NodeTagsBspReader.Entry>
+public class NodeTagsQuadtreeReader : QuadtreeReader<NodeTagsQuadtreeReader.Entry>
 {
     public class Entry
     {
@@ -92,18 +92,18 @@ public class NodeTagsBspReader : BspReader<NodeTagsBspReader.Entry>
     private string _tagValue;
     private ConcurrentDictionary<long, string> _strings = new ConcurrentDictionary<long, string>();
 
-    public NodeTagsBspReader(string bspFilename, string stringsFilename, string tagValue) : base(bspFilename, 16)
+    public NodeTagsQuadtreeReader(string qtrFilename, string stringsFilename, string tagValue) : base(qtrFilename, 16)
     {
         _stringsFilename = stringsFilename;
         _tagValue = tagValue;
     }
 
-    protected override void ReadHeader(BspReaderContext c)
+    protected override void ReadHeader(QuadtreeReaderContext c)
     {
         var header = c.Reader.ReadBytes(5);
     }
 
-    protected override Entry ReadItem(BspReaderContext c)
+    protected override Entry ReadItem(QuadtreeReaderContext c)
     {
         var result = new Entry();
         var ilat = c.LatBits | c.Reader.ReadUInt16();
@@ -131,7 +131,7 @@ public class NodeTagsBspReader : BspReader<NodeTagsBspReader.Entry>
     }
 }
 
-//public class WayTagsBspReader : BspReader<NodeTagsBspReader.Entry>
+//public class WayTagsQuadtreeReader : QuadtreeReader<NodeTagsQuadtreeReader.Entry>
 //{
 //    public class Entry
 //    {
@@ -139,7 +139,7 @@ public class NodeTagsBspReader : BspReader<NodeTagsBspReader.Entry>
 //        public string TagValue;
 //    }
 
-//    public WayTagsBspReader(string filename) : base(filename, 16)
+//    public WayTagsQuadtreeReader(string filename) : base(filename, 16)
 //    {
 //    }
 

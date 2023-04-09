@@ -1,8 +1,8 @@
 ﻿namespace QuadroMaps.Core;
 
-public class BspWriter<T>
+public class QuadtreeWriter<T>
 {
-    public BspWriter(BinaryWriter2 bw, int depthLimit, int itemsCountLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> write)
+    public QuadtreeWriter(BinaryWriter2 bw, int depthLimit, int itemsCountLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> write)
     {
         _bw = bw;
         _depthLimit = depthLimit;
@@ -17,12 +17,12 @@ public class BspWriter<T>
     private Func<T, int, int, int, bool> _filter;
     private Action<T, BinaryWriter2> _write;
 
-    public void SaveBsp(List<T> items)
+    public void WriteQuadtree(List<T> items)
     {
-        saveBsp(items, 0, 0, 0);
+        writeQuadtree(items, 0, 0, 0);
     }
 
-    private void saveBsp(List<T> items, int depth, int latBits, int lonBits)
+    private void writeQuadtree(List<T> items, int depth, int latBits, int lonBits)
     {
         var mask = ~((1 << (32 - depth)) - 1);
         if (depth > 0)
@@ -51,18 +51,18 @@ public class BspWriter<T>
         _bw.Write(0); // 10
         _bw.Write(0); // 11
 
-        saveBsp(items, depth, latBits, lonBits);
+        writeQuadtree(items, depth, latBits, lonBits);
         _bw.Position = backpatch;
         _bw.Write(checked((uint)_bw.Length));
         _bw.Position = _bw.Length;
-        saveBsp(items, depth, latBits, lonBits | 1);
+        writeQuadtree(items, depth, latBits, lonBits | 1);
         _bw.Position = backpatch + 4;
         _bw.Write(checked((uint)_bw.Length));
         _bw.Position = _bw.Length;
-        saveBsp(items, depth, latBits | 1, lonBits);
+        writeQuadtree(items, depth, latBits | 1, lonBits);
         _bw.Position = backpatch + 8;
         _bw.Write(checked((uint)_bw.Length));
         _bw.Position = _bw.Length;
-        saveBsp(items, depth, latBits | 1, lonBits | 1);
+        writeQuadtree(items, depth, latBits | 1, lonBits | 1);
     }
 }

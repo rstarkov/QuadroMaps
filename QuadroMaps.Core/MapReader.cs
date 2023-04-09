@@ -4,8 +4,8 @@ namespace QuadroMaps.Core;
 
 public class NodeTagset
 {
-    public NodeTagsBspReader RemainingReader;
-    public Dictionary<string, NodeTagsBspReader> ValueReaders = new();
+    public NodeTagsQuadtreeReader RemainingReader;
+    public Dictionary<string, NodeTagsQuadtreeReader> ValueReaders = new();
     public int TotalCount;
 }
 
@@ -26,9 +26,9 @@ public class MapReader
         foreach (var file in new DirectoryInfo(dbPath).GetFiles("*.*", SearchOption.AllDirectories))
         {
             Match match;
-            if ((match = Regex.Match(file.FullName.UnescapeFilename(), @"^node\.tag\.(?<tagname>[^=]*)=(?<tagvalue>[^=]*)\.(?<count>\d+)\.[0-9a-f]+\.bsp$")).Success)
+            if ((match = Regex.Match(file.FullName.UnescapeFilename(), @"^node\.tag\.(?<tagname>[^=]*)=(?<tagvalue>[^=]*)\.(?<count>\d+)\.[0-9a-f]+\.qtr$")).Success)
             {
-                _nodeTags[match.Groups["tagname"].Value].ValueReaders[match.Groups["tagvalue"].Value] = new NodeTagsBspReader(file.FullName, null, match.Groups["tagvalue"].Value);
+                _nodeTags[match.Groups["tagname"].Value].ValueReaders[match.Groups["tagvalue"].Value] = new NodeTagsQuadtreeReader(file.FullName, null, match.Groups["tagvalue"].Value);
             }
         }
     }
@@ -51,7 +51,7 @@ public class MapReader
     //{
     //}
 
-    static (uint, double, double) latlon2bsp(double lat, double lon)
+    static (uint, double, double) latlon2qtree(double lat, double lon)
     {
         double latMin = -90;
         double latMax = 90;
