@@ -1,6 +1,6 @@
 ﻿namespace QuadroMaps.Core;
 
-public class RectArea
+public class LatLonRect
 {
     public int LatMin = int.MaxValue, LatMax, LonMin, LonMax;
 
@@ -39,7 +39,7 @@ public class RectArea
         }
     }
 
-    public void AddArea(RectArea area)
+    public void AddArea(LatLonRect area)
     {
         AddLatLon(area.LatMin, area.LonMin);
         AddLatLon(area.LatMax, area.LonMax);

@@ -26,8 +26,8 @@ public class PbfConverter
         var wayTags = new AutoDictionary<string, string, List<uint>>((_, __) => new List<uint>());
         var nodeTags = new AutoDictionary<string, string, List<ulong>>((_, __) => new List<ulong>());
         var relTags = new AutoDictionary<string, string, List<uint>>((_, __) => new List<uint>());
-        var wayAreas = new AutoDictionary<uint, RectArea>(_ => new RectArea());
-        var relAreas = new AutoDictionary<uint, RectArea>(_ => new RectArea());
+        var wayAreas = new AutoDictionary<uint, LatLonRect>(_ => new LatLonRect());
+        var relAreas = new AutoDictionary<uint, LatLonRect>(_ => new LatLonRect());
         var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
         long prevWayId = 0, prevWayIdPos = 0;
         long prevRelId = 0, prevRelIdPos = 0;

@@ -29,7 +29,7 @@ public abstract class BspReader<T>
     protected virtual void ReadHeader(BspReaderContext c) { }
     protected abstract T ReadItem(BspReaderContext c);
 
-    public IEnumerable<T> ReadArea(RectArea area)
+    public IEnumerable<T> ReadArea(LatLonRect area)
     {
         using var stream = File.Open(_filename, FileMode.Open, FileAccess.Read, FileShare.Read);
         using var br = new BinaryReader(stream);
