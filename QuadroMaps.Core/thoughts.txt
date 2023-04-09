@@ -1,0 +1,26 @@
+- ways.dat should be geospatially sorted despite not being geospatially indexed
+- quadtree leaf items can be sorted and diff-encoded. And/or maybe lz4'd?
+  - lookups can then binary search, though we subdivide enough that it probably isn't worth
+
+- given a Way, it's expensive-ish to filter its nodes list by tag (must query those separately and intersect)
+
+
+Maybe:
+
+- what if nodes stored a list of ways and rels they're a member of, and ways were just a by-ID database
+  - ways to also store a list of rels they're a member of
+
+- encoding node IDs instead of coords approximately triples the data size, and vastly slows down the type
+  of query that this library is built for
+
+- should we have an extra file for each tagname to find entities that have that tag regardless of value?
+  this could be optional and depend on application; just expose as optional tools
+
+
+Node identity:
+
+- nudging any overlapping node coordinates by LSB could allow us to preserve node identity, at the expense
+  of nodes no longer being aligned perfectly (LSB=~1cm).
+  
+- how often do nodes even overlap exactly? Most areas just reuses the same node for multiple things if the exact same position is required
+

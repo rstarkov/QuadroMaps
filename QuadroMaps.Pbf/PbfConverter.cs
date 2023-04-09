@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using OsmSharp;
 using QuadroMaps.Core;
 using RT.Util;
@@ -11,11 +11,6 @@ public class PbfConverter
 {
     public void Convert(string pbfFilename, string dbPath)
     {
-        // todo:
-        // - ways.dat should be geospatially sorted despite not being geospatially indexed
-        // - quadtree leaf items can be sorted and diff-encoded. And/or maybe lz4'd?
-        // - nodes in ways.dat should be diff-encoded
-
         Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
         string hash(string val) => MD5.Create().ComputeHash(val.ToUtf8()).ToHex()[..6].ToLower();
         var filestreams = new AutoDictionary<string, BinaryWriter2>(fname => new BinaryWriter2(openfile(fname)));
@@ -156,6 +151,7 @@ public class PbfConverter
                     });
             }
         }
+        // this is pointless as long as multiple nodes can be located at the same coordinates
         //saveQuadtree(filestream("", "node.osm_ids.qtr"), nodes.ToList(), 16, 0,
         //    (t, lat, lon, mask) => { var (ilat, ilon) = node2ilatlon(t.Value); return (ilat & mask) == lat && (ilon & mask) == lon; },
         //    (t, bw) =>
