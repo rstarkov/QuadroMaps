@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using OsmSharp;
 using QuadroMaps.Core;
 using RT.Util;
@@ -136,13 +136,13 @@ public class PbfConverter
                     else
                     {
                         var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.qtr");
-                        bw.Write(kind.ToUpper().PadRight(4, ' ')); // TODO: remove length and write as bytes
+                        bw.Write(kind.ToUpper().PadRight(4, ' ').ToCharArray());
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
                 var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.qtr");
-                bw2.Write(kind.ToUpper().PadRight(4, ' ')); // TODO: remove length and write as bytes
+                bw2.Write(kind.ToUpper().PadRight(4, ' ').ToCharArray());
                 var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.strings"));
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),

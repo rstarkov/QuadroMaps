@@ -100,7 +100,7 @@ public class NodeTagsQuadtreeReader : QuadtreeReader<NodeTagsQuadtreeReader.Entr
 
     protected override void ReadHeader(QuadtreeReaderContext c)
     {
-        var header = c.Reader.ReadBytes(5);
+        var header = c.Reader.ReadBytes(4);
     }
 
     protected override Entry ReadItem(QuadtreeReaderContext c)
