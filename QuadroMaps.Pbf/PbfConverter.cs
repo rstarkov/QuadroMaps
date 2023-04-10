@@ -163,6 +163,8 @@ public class PbfConverter
             var headerID = kind == "node" ? "NTAG" : kind == "way" ? "WTAG" : kind == "rel" ? "RTAG" : throw new Exception();
             foreach (var tagKey in tags.Keys)
             {
+                if (!TagKeyFilter(kind, tagKey))
+                    continue;
                 var otherValues = new List<string>();
                 foreach (var tagVal in tags[tagKey].Keys)
                 {
@@ -260,5 +262,20 @@ public class PbfConverter
                 _bwStrings.Dispose();
             }
         }
+    }
+
+    public virtual void Log(string msg)
+    {
+        Console.WriteLine(msg);
+    }
+
+    public virtual bool TagKeyFilter(string kind, string tagKey)
+    {
+        if (!tagKey.All(c => char.IsDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-' || c == ':'))
+        {
+            Log($"Skipping tag key: {tagKey}");
+            return false;
+        }
+        return true;
     }
 }
