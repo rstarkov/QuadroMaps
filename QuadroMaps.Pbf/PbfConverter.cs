@@ -18,7 +18,7 @@ public class PbfConverter
         var nameNoExt = Path.GetFileNameWithoutExtension(name);
         if (nameNoExt.Any(c => char.IsUpper(c))) // hash suffix is necessary due to case insensitivity of the Windows filesystems
             name = PathUtil.AppendBeforeExtension(name, "." + MD5.Create().ComputeHash(nameNoExt.ToUtf8()).ToHex()[..6].ToLower());
-        var fullpath = Path.Combine(_dbPath.Concat(path.Split(':').Select(s => s.EscapeFilename())).Concat(name.EscapeFilename()).ToArray());
+        var fullpath = Path.Combine(_dbPath, path, name.EscapeFilename());
         if (_filestreams.TryGetValue(fullpath, out var result))
             return result ?? throw new Exception("File stream has already been closed"); // this error is an indication that we're trying to overwrite a file that we've already finalised and closed - naming conflict?
         Directory.CreateDirectory(Path.GetDirectoryName(fullpath));
@@ -174,15 +174,15 @@ public class PbfConverter
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = createfile(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr", headerID, "1", tags[tagKey][tagVal].Count);
+                        var bw = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}={tagVal}.{kind}.tag", headerID, "1", tags[tagKey][tagVal].Count);
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                         _filestreams[bw.Key] = null;
                         bw.Dispose();
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var bw2 = createfile(tagKey, $"{kind}.tag.{tagKey}.qtr", headerID, "1", remainingTags.Count);
-                var strings = remainingTags.Count < 500 ? null : new StringsCacher(this, tagKey, $"{kind}.tag.{tagKey}.strings");
+                var bw2 = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}.{kind}.tag", headerID, "1", remainingTags.Count);
+                var strings = remainingTags.Count < 500 ? null : new StringsCacher(this, GetTagFilePath(kind, tagKey), $"{tagKey}.{kind}.strings");
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
                     (t, bw) =>
@@ -271,7 +271,7 @@ public class PbfConverter
         Console.WriteLine(msg);
     }
 
-    public virtual bool TagKeyFilter(string kind, string tagKey)
+    protected virtual bool TagKeyFilter(string kind, string tagKey)
     {
         if (!tagKey.All(c => char.IsDigit(c) || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '-' || c == ':'))
         {
@@ -279,5 +279,11 @@ public class PbfConverter
             return false;
         }
         return true;
+    }
+
+    protected virtual string GetTagFilePath(string kind, string tagKey)
+    {
+        // tag file paths are completely ignored by the reader, so paths can be anything
+        return Path.Combine("tags".Concat(tagKey.Split(':').Select(s => s.EscapeFilename())).ToArray());
     }
 }

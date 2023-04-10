@@ -6,6 +6,9 @@
 
 - way.tag.* are 20% of the data and are highly compressible; can the storage be improved?
 
+- it's not possible to delete ways/rels with tags that don't interest us - all we can do is filter them when generating the dump
+  similarly it's not possible to see at a glance which ways tags cause all that space consumption
+
 
 Maybe:
 
