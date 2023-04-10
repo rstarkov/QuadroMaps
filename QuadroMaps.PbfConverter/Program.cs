@@ -7,6 +7,8 @@ internal class Program
     static void Main(string[] args)
     {
         // this obviously needs some work...
-        new PbfConverter(args[0], args[1]).Convert();
+        var start = DateTime.UtcNow;
+        new PbfConverter(PbfUtil.ReadPbf(args[0]), args[1]).Convert();
+        Console.WriteLine($"Done in {(DateTime.UtcNow - start).TotalSeconds:0.0} sec");
     }
 }

@@ -7,12 +7,11 @@ namespace QuadroMaps.Pbf;
 
 public static class PbfUtil
 {
-    public static IEnumerable<OsmGeo> ReadPbf(string pbfFilename, bool relsLast = false)
+    public static IEnumerable<OsmGeo> ReadPbf(string pbfFilename, bool relsFirst)
     {
-        Console.WriteLine("ReadPbf: reading rels...");
-        if (relsLast)
+        if (!relsFirst)
         {
-            foreach (var item in pbfInner(pbfFilename))
+            foreach (var item in ReadPbf(pbfFilename))
                 yield return item;
             yield break;
         }
@@ -20,8 +19,9 @@ public static class PbfUtil
         var relsFilename = pbfFilename + ".rels";
         if (!File.Exists(relsFilename))
         {
+            Console.WriteLine("ReadPbf: generating rels (one-time)...");
             using var writer = new BinaryWriter(new GZipStream(File.Open(relsFilename, FileMode.Create, FileAccess.Write, FileShare.Read), CompressionLevel.Optimal));
-            foreach (var rel in pbfInner(pbfFilename).OfType<Relation>())
+            foreach (var rel in ReadPbf(pbfFilename).OfType<Relation>())
             {
                 writer.Write7BitEncodedInt64(rel.Id.Value);
                 writer.Write7BitEncodedInt(rel.Members.Length);
@@ -40,6 +40,7 @@ public static class PbfUtil
             }
             writer.Write7BitEncodedInt64(-47);
         }
+        Console.WriteLine("ReadPbf: reading rels...");
         {
             using var reader = new BinaryReader(new GZipStream(File.Open(relsFilename, FileMode.Open, FileAccess.Read, FileShare.Read), CompressionMode.Decompress));
             while (true)
@@ -68,12 +69,12 @@ public static class PbfUtil
             }
         }
         Console.WriteLine("ReadPbf: reading rest of pbf...");
-        foreach (var item in pbfInner(pbfFilename))
+        foreach (var item in ReadPbf(pbfFilename))
             if (item is not Relation)
                 yield return item;
     }
 
-    private static IEnumerable<OsmGeo> pbfInner(string pbfFilename)
+    public static IEnumerable<OsmGeo> ReadPbf(string pbfFilename)
     {
         var last = DateTime.UtcNow;
         using var pbfStream = File.Open(pbfFilename, FileMode.Open, FileAccess.Read, FileShare.Read);

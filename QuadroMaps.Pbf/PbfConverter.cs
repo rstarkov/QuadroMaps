@@ -9,7 +9,8 @@ namespace QuadroMaps.Pbf;
 
 public class PbfConverter
 {
-    private string _pbfFilename, _dbPath;
+    private IEnumerable<OsmGeo> _pbfData;
+    private string _dbPath;
     private Dictionary<string, BinaryWriter2> _filestreams = new();
 
     private BinaryWriter2 filestream(string path, string name)
@@ -46,9 +47,9 @@ public class PbfConverter
         return writer;
     }
 
-    public PbfConverter(string pbfFilename, string dbPath)
+    public PbfConverter(IEnumerable<OsmGeo> pbfData, string dbPath)
     {
-        _pbfFilename = pbfFilename;
+        _pbfData = pbfData;
         _dbPath = dbPath;
     }
 
@@ -71,8 +72,9 @@ public class PbfConverter
         var bwRels = createfile("", "rels.dat", "RELS", "1", () => relRenumber.Count);
         var bwRelsOffsets = createfile("", "rels.offsets", "OFFS", "1", () => relRenumber.Count);
         var bwRelsOsmId = createfile("", "osm_ids.rels.dat", "OIDS", "1", () => relRenumber.Count);
-        foreach (var el in PbfUtil.ReadPbf(_pbfFilename, relsLast: true))
+        foreach (var el in _pbfData)
         {
+            // in a normal PBF file, entities are stored in this order: first all the Nodes, then all the Ways, then all the Relations, and we count on that here
             if (el is Node node)
             {
                 var n = LatLon.FromDeg(node.Latitude.Value, node.Longitude.Value).Packed;
