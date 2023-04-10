@@ -66,12 +66,12 @@ public class PbfConverter
         var relStrings = new StringsCacher(this, "", "rels.strings");
         long prevWayId = 0, prevWayIdPos = 0;
         long prevRelId = 0, prevRelIdPos = 0;
-        var bwWays = createfile("", "ways.dat", "WAYS", "1", () => wayRenumber.Count);
-        var bwWaysOffsets = createfile("", "ways.offsets", "OFFS", "1", () => wayRenumber.Count);
-        var bwWaysOsmId = createfile("", "osm_ids.ways.dat", "OIDS", "1", () => wayRenumber.Count);
-        var bwRels = createfile("", "rels.dat", "RELS", "1", () => relRenumber.Count);
-        var bwRelsOffsets = createfile("", "rels.offsets", "OFFS", "1", () => relRenumber.Count);
-        var bwRelsOsmId = createfile("", "osm_ids.rels.dat", "OIDS", "1", () => relRenumber.Count);
+        var bwWays = createfile("", "ways.dat", "WAYS", "A", () => wayRenumber.Count);
+        var bwWaysOffsets = createfile("", "ways.offsets", "OFFS", "A", () => wayRenumber.Count);
+        var bwWaysOsmId = createfile("", "osm_ids.ways.dat", "OIDS", "A", () => wayRenumber.Count);
+        var bwRels = createfile("", "rels.dat", "RELS", "A", () => relRenumber.Count);
+        var bwRelsOffsets = createfile("", "rels.offsets", "OFFS", "A", () => relRenumber.Count);
+        var bwRelsOsmId = createfile("", "osm_ids.rels.dat", "OIDS", "A", () => relRenumber.Count);
         foreach (var el in _pbfData)
         {
             // in a normal PBF file, entities are stored in this order: first all the Nodes, then all the Ways, then all the Relations, and we count on that here
@@ -174,14 +174,14 @@ public class PbfConverter
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}={tagVal}.{kind}.tag", headerID, "1", tags[tagKey][tagVal].Count);
+                        var bw = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}={tagVal}.{kind}.tag", headerID, "A", tags[tagKey][tagVal].Count);
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                         _filestreams[bw.Key] = null;
                         bw.Dispose();
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var bw2 = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}.{kind}.tag", headerID, "1", remainingTags.Count);
+                var bw2 = createfile(GetTagFilePath(kind, tagKey), $"{tagKey}.{kind}.tag", headerID, "A", remainingTags.Count);
                 var strings = remainingTags.Count < 500 ? null : new StringsCacher(this, GetTagFilePath(kind, tagKey), $"{tagKey}.{kind}.strings");
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
@@ -248,7 +248,7 @@ public class PbfConverter
                 if (_map.TryGetValue(value, out long result))
                     return result;
                 if (_bwStrings == null)
-                    _bwStrings = _converter.createfile(_path, _name, "STRN", "1", () => _map.Count);
+                    _bwStrings = _converter.createfile(_path, _name, "STRN", "A", () => _map.Count);
                 result = _bwStrings.Position;
                 _bwStrings.Write(value);
                 _map.Add(value, result);
