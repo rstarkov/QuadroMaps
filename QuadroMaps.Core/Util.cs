@@ -8,6 +8,12 @@ public sealed class BinaryWriter2 : BinaryWriter
     public long Position { get { return OutStream.Position; } set { OutStream.Position = value; } }
     public long Length => OutStream.Length;
     public override Stream BaseStream => OutStream; // we don't do buffered writes, so no need to flush the stream like the base implementation getter does
+    public Action<BinaryWriter2> BeforeDispose = null;
+    protected override void Dispose(bool disposing)
+    {
+        BeforeDispose?.Invoke(this);
+        base.Dispose(disposing);
+    }
 }
 
 public static class ExtensionMethods

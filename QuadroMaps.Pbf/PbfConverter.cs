@@ -201,7 +201,12 @@ internal class StringsCacher
             if (_bwStrings == null)
             {
                 _bwStrings = _getWriter();
-                _bwStrings.Write("STRN:1:       :".ToCharArray()); // length = 15; todo: backpatch count
+                _bwStrings.Write("STRN:1:       :".ToCharArray()); // length = 15
+                _bwStrings.BeforeDispose = (self) =>
+                {
+                    self.Position = 7;
+                    self.Write($"{_map.Count.ClipMax(9999999),7}".ToCharArray());
+                };
             }
             result = _bwStrings.Position;
             _bwStrings.Write(value);
