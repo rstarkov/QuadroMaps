@@ -9,13 +9,52 @@ namespace QuadroMaps.Pbf;
 
 public class PbfConverter
 {
-    public void Convert(string pbfFilename, string dbPath)
+    private string _pbfFilename, _dbPath;
+    private Dictionary<string, BinaryWriter2> _filestreams = new();
+
+    private BinaryWriter2 filestream(string path, string name)
     {
-        Stream openfile(string name) { Directory.CreateDirectory(Path.GetDirectoryName(name)); return File.Open(name, FileMode.Create, FileAccess.Write, FileShare.Read); }
-        // name hash is necessary due to case insensitivity of the Windows filesystems
-        string hash(string val) => val.Any(c => char.IsUpper(c)) ? "." + (MD5.Create().ComputeHash(val.ToUtf8()).ToHex()[..6].ToLower()) : "";
-        var filestreams = new AutoDictionary<string, BinaryWriter2>(fname => new BinaryWriter2(openfile(fname)));
-        BinaryWriter2 filestream(string path, string name) => filestreams[Path.Combine(dbPath.Concat(path.Split(':').Select(s => s.EscapeFilename())).Concat(PathUtil.AppendBeforeExtension(name, hash(Path.GetFileNameWithoutExtension(name))).FilenameCharactersEscape()).ToArray())];
+        var nameNoExt = Path.GetFileNameWithoutExtension(name);
+        if (nameNoExt.Any(c => char.IsUpper(c))) // hash suffix is necessary due to case insensitivity of the Windows filesystems
+            name = PathUtil.AppendBeforeExtension(name, "." + MD5.Create().ComputeHash(nameNoExt.ToUtf8()).ToHex()[..6].ToLower());
+        var fullpath = Path.Combine(_dbPath.Concat(path.Split(':').Select(s => s.EscapeFilename())).Concat(name.EscapeFilename()).ToArray());
+        if (_filestreams.TryGetValue(fullpath, out var result))
+            return result;
+        Directory.CreateDirectory(Path.GetDirectoryName(fullpath));
+        return _filestreams[fullpath] = new BinaryWriter2(File.Open(fullpath, FileMode.Create, FileAccess.Write, FileShare.Read)); // this can throw File Already Opened - it's an indication of a naming conflict (file case? trailing dots?)
+    }
+
+    private BinaryWriter2 createfile(string path, string name, string headerID, string ver, int count)
+    {
+        if (headerID.Length != 4 || ver.Length != 1)
+            throw new Exception();
+        var writer = filestream(path, name);
+        writer.Write($"{headerID.ToUpper()}:{ver}:{count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+        return writer;
+    }
+
+    private BinaryWriter2 createfile(string path, string name, string headerID, string ver, Func<int> getCount)
+    {
+        if (headerID.Length != 4 || ver.Length != 1)
+            throw new Exception();
+        var writer = filestream(path, name);
+        writer.Write($"{headerID.ToUpper()}:{ver}:       :".ToCharArray()); // length = 15
+        writer.BeforeDispose = (self) =>
+        {
+            self.Position = 7;
+            self.Write($"{getCount().ClipMax(9999999),7}".ToCharArray());
+        };
+        return writer;
+    }
+
+    public PbfConverter(string pbfFilename, string dbPath)
+    {
+        _pbfFilename = pbfFilename;
+        _dbPath= dbPath;
+    }
+
+    public void Convert()
+    {
         var nodes = new Dictionary<long, ulong>();
         var wayRenumber = new Dictionary<long, uint>();
         var relRenumber = new Dictionary<long, uint>();
@@ -27,13 +66,13 @@ public class PbfConverter
         var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
         long prevWayId = 0, prevWayIdPos = 0;
         long prevRelId = 0, prevRelIdPos = 0;
-        var bwWays = filestream("", "ways.dat");
-        var bwWaysOffsets = filestream("", "ways.offsets");
-        var bwWaysOsmId = filestream("", "osm_ids.ways.dat");
-        var bwRels = filestream("", "rels.dat");
-        var bwRelsOffsets = filestream("", "rels.offsets");
-        var bwRelsOsmId = filestream("", "osm_ids.rels.dat");
-        foreach (var el in PbfUtil.ReadPbf(pbfFilename, relsLast: true))
+        var bwWays = createfile("", "ways.dat", "WAYS", "1", () => wayRenumber.Count);
+        var bwWaysOffsets = createfile("", "ways.offsets", "OFFS", "1", () => wayRenumber.Count);
+        var bwWaysOsmId = createfile("", "osm_ids.ways.dat", "OIDS", "1", () => wayRenumber.Count);
+        var bwRels = createfile("", "rels.dat", "RELS", "1", () => relRenumber.Count);
+        var bwRelsOffsets = createfile("", "rels.offsets", "OFFS", "1", () => relRenumber.Count);
+        var bwRelsOsmId = createfile("", "osm_ids.rels.dat", "OIDS", "1", () => relRenumber.Count);
+        foreach (var el in PbfUtil.ReadPbf(_pbfFilename, relsLast: true))
         {
             if (el is Node node)
             {
@@ -118,7 +157,7 @@ public class PbfConverter
                 prevRelId = rel.Id.Value;
             }
         }
-        void saveQuadtree<T>(BinaryWriter2 bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
+        static void saveQuadtree<T>(BinaryWriter2 bw, List<T> items, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
             => new QuadtreeWriter<T>(bw, depthLimit, itemsLimit, filter, writer).WriteQuadtree(items);
         void saveTags<T>(AutoDictionary<string, string, List<T>> tags, string kind, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
         {
@@ -132,14 +171,12 @@ public class PbfConverter
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr");
-                        bw.Write($"{headerID}:1:{tags[tagKey][tagVal].Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+                        var bw = createfile(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr", headerID, "1", tags[tagKey][tagVal].Count);
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.qtr");
-                bw2.Write($"{headerID}:1:{remainingTags.Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+                var bw2 = createfile(tagKey, $"{kind}.tag.{tagKey}.qtr", headerID, "1", remainingTags.Count);
                 var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.strings"));
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
@@ -178,7 +215,7 @@ public class PbfConverter
                 bw.Write((ushort)ilon);
             });
 
-        foreach (var fs in filestreams.Values)
+        foreach (var fs in _filestreams.Values)
             fs.Dispose();
     }
 }
