@@ -19,9 +19,11 @@ public class PbfConverter
             name = PathUtil.AppendBeforeExtension(name, "." + MD5.Create().ComputeHash(nameNoExt.ToUtf8()).ToHex()[..6].ToLower());
         var fullpath = Path.Combine(_dbPath.Concat(path.Split(':').Select(s => s.EscapeFilename())).Concat(name.EscapeFilename()).ToArray());
         if (_filestreams.TryGetValue(fullpath, out var result))
-            return result;
+            return result ?? throw new Exception("File stream has already been closed"); // this error is an indication that we're trying to overwrite a file that we've already finalised and closed - naming conflict?
         Directory.CreateDirectory(Path.GetDirectoryName(fullpath));
-        return _filestreams[fullpath] = new BinaryWriter2(File.Open(fullpath, FileMode.Create, FileAccess.Write, FileShare.Read)); // this can throw File Already Opened - it's an indication of a naming conflict (file case? trailing dots?)
+        _filestreams[fullpath] = new BinaryWriter2(File.Open(fullpath, FileMode.Create, FileAccess.Write, FileShare.Read)); // this can throw File Already Opened - it's an indication of a naming conflict (file case? trailing dots?)
+        _filestreams[fullpath].Key = fullpath;
+        return _filestreams[fullpath];
     }
 
     private BinaryWriter2 createfile(string path, string name, string headerID, string ver, int count)
@@ -170,6 +172,8 @@ public class PbfConverter
                     {
                         var bw = createfile(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr", headerID, "1", tags[tagKey][tagVal].Count);
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
+                        _filestreams[bw.Key] = null;
+                        bw.Dispose();
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
@@ -185,6 +189,9 @@ public class PbfConverter
                         else
                             bw.Write7BitEncodedInt64(strings[t.tagValue]);
                     });
+                _filestreams[bw2.Key] = null;
+                bw2.Dispose();
+                strings?.Dispose();
             }
         }
         // this is pointless as long as multiple nodes can be located at the same coordinates
@@ -213,10 +220,10 @@ public class PbfConverter
             });
 
         foreach (var fs in _filestreams.Values)
-            fs.Dispose();
+            fs?.Dispose();
     }
 
-    private class StringsCacher
+    private class StringsCacher : IDisposable
     {
         private Dictionary<string, long> _map = new Dictionary<string, long>();
         private PbfConverter _converter;
@@ -242,6 +249,15 @@ public class PbfConverter
                 _bwStrings.Write(value);
                 _map.Add(value, result);
                 return result;
+            }
+        }
+
+        public void Dispose()
+        {
+            if (_bwStrings != null)
+            {
+                _converter._filestreams[_bwStrings.Key] = null;
+                _bwStrings.Dispose();
             }
         }
     }
