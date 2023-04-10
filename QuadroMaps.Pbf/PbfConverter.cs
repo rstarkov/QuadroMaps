@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using OsmSharp;
 using QuadroMaps.Core;
 using RT.Util;
@@ -122,6 +122,7 @@ public class PbfConverter
             => new QuadtreeWriter<T>(bw, depthLimit, itemsLimit, filter, writer).WriteQuadtree(items);
         void saveTags<T>(AutoDictionary<string, string, List<T>> tags, string kind, int depthLimit, int itemsLimit, Func<T, int, int, int, bool> filter, Action<T, BinaryWriter2> writer)
         {
+            var headerID = kind == "node" ? "NTAG" : kind == "way" ? "WTAG" : kind == "rel" ? "RTAG" : throw new Exception();
             foreach (var tagKey in tags.Keys)
             {
                 var otherValues = new List<string>();
@@ -132,13 +133,13 @@ public class PbfConverter
                     else
                     {
                         var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr");
-                        bw.Write($"{kind.ToUpper(),-4}:1:{tags[tagKey][tagVal].Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+                        bw.Write($"{headerID}:1:{tags[tagKey][tagVal].Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
                 var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.qtr");
-                bw2.Write($"{kind.ToUpper(),-4}:1:{remainingTags.Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+                bw2.Write($"{headerID}:1:{remainingTags.Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
                 var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.strings"));
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
