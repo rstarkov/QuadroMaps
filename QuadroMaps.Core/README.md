@@ -49,6 +49,8 @@ A QuadroMaps map is a directory with a bunch of files:
 
 Only ways.dat* and rels.dat* files are strictly required. OSM IDs are not used anywhere and may be deleted if not required by the application. Any tag files that the application is not interested in may be deleted.
 
+Some of the tags files have a hash inserted into the filename before the extension. This is inserted into any filename that has uppercase characters, to avoid filename conflicts on Windows.
+
 ### Node identity
 
 The QuadroMaps format is extremely inefficient at the task of enumerating all tags of a particular node. In fact, the format goes all out on the assumption that applications do not need to do this: it is impossible to unambiguously find all tags for any given node. So if a query for tag A and a query for tag B each returns a node at the same coordinates, it is not possible to determine whether this was a single node in PBF or two nodes at the same coordinates. Bottom line is, nodes lose their identity in QuadroMaps format.

@@ -97,7 +97,7 @@ public static class ExtensionMethods
             {
                 result.Append('{');
                 foreach (var bt in Encoding.UTF8.GetBytes(c.ToString()))
-                    result.AppendFormat("{0:X2}", bt);
+                    result.AppendFormat("{0:x2}", bt);
                 result.Append('}');
             }
             else
