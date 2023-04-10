@@ -29,16 +29,13 @@ public class PbfConverter
         if (headerID.Length != 4 || ver.Length != 1)
             throw new Exception();
         var writer = filestream(path, name);
-        writer.Write($"{headerID.ToUpper()}:{ver}:{count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+        writer.Write($"{headerID.ToUpper()}:{ver}:{(count == 0 ? "" : count.ClipMax(9999999).ToString()).PadLeft(7)}:".ToCharArray()); // length = 15
         return writer;
     }
 
     private BinaryWriter2 createfile(string path, string name, string headerID, string ver, Func<int> getCount)
     {
-        if (headerID.Length != 4 || ver.Length != 1)
-            throw new Exception();
-        var writer = filestream(path, name);
-        writer.Write($"{headerID.ToUpper()}:{ver}:       :".ToCharArray()); // length = 15
+        var writer = createfile(path, name, headerID, ver, 0);
         writer.BeforeDispose = (self) =>
         {
             self.Position = 7;
@@ -50,7 +47,7 @@ public class PbfConverter
     public PbfConverter(string pbfFilename, string dbPath)
     {
         _pbfFilename = pbfFilename;
-        _dbPath= dbPath;
+        _dbPath = dbPath;
     }
 
     public void Convert()
@@ -63,7 +60,7 @@ public class PbfConverter
         var relTags = new AutoDictionary<string, string, List<uint>>((_, __) => new List<uint>());
         var wayAreas = new AutoDictionary<uint, LatLonRect>(_ => new LatLonRect());
         var relAreas = new AutoDictionary<uint, LatLonRect>(_ => new LatLonRect());
-        var relStrings = new StringsCacher(() => filestream("", "rels.strings"));
+        var relStrings = new StringsCacher(this, "", "rels.strings");
         long prevWayId = 0, prevWayIdPos = 0;
         long prevRelId = 0, prevRelIdPos = 0;
         var bwWays = createfile("", "ways.dat", "WAYS", "1", () => wayRenumber.Count);
@@ -177,7 +174,7 @@ public class PbfConverter
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
                 var bw2 = createfile(tagKey, $"{kind}.tag.{tagKey}.qtr", headerID, "1", remainingTags.Count);
-                var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.strings"));
+                var strings = remainingTags.Count < 500 ? null : new StringsCacher(this, tagKey, $"{kind}.tag.{tagKey}.strings");
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
                     (t, bw) =>
@@ -218,39 +215,34 @@ public class PbfConverter
         foreach (var fs in _filestreams.Values)
             fs.Dispose();
     }
-}
 
-internal class StringsCacher
-{
-    private Dictionary<string, long> _map = new Dictionary<string, long>();
-    private Func<BinaryWriter2> _getWriter;
-    private BinaryWriter2 _bwStrings;
-
-    public StringsCacher(Func<BinaryWriter2> getWriter)
+    private class StringsCacher
     {
-        _getWriter = getWriter;
-    }
+        private Dictionary<string, long> _map = new Dictionary<string, long>();
+        private PbfConverter _converter;
+        private BinaryWriter2 _bwStrings;
+        private string _path, _name;
 
-    public long this[string value]
-    {
-        get
+        public StringsCacher(PbfConverter converter, string path, string name)
         {
-            if (_map.TryGetValue(value, out long result))
-                return result;
-            if (_bwStrings == null)
+            _converter = converter;
+            _path = path;
+            _name = name;
+        }
+
+        public long this[string value]
+        {
+            get
             {
-                _bwStrings = _getWriter();
-                _bwStrings.Write("STRN:1:       :".ToCharArray()); // length = 15
-                _bwStrings.BeforeDispose = (self) =>
-                {
-                    self.Position = 7;
-                    self.Write($"{_map.Count.ClipMax(9999999),7}".ToCharArray());
-                };
+                if (_map.TryGetValue(value, out long result))
+                    return result;
+                if (_bwStrings == null)
+                    _bwStrings = _converter.createfile(_path, _name, "STRN", "1", () => _map.Count);
+                result = _bwStrings.Position;
+                _bwStrings.Write(value);
+                _map.Add(value, result);
+                return result;
             }
-            result = _bwStrings.Position;
-            _bwStrings.Write(value);
-            _map.Add(value, result);
-            return result;
         }
     }
 }
