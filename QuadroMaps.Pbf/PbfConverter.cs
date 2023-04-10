@@ -27,11 +27,11 @@ public class PbfConverter
         long prevWayId = 0, prevWayIdPos = 0;
         long prevRelId = 0, prevRelIdPos = 0;
         var bwWays = filestream("", "ways.dat");
-        var bwWaysId = filestream("", "ways.id.dat");
-        var bwWaysOsmId = filestream("", "ways.osm_id.dat");
+        var bwWaysOffsets = filestream("", "ways.offsets");
+        var bwWaysOsmId = filestream("", "osm_ids.ways.dat");
         var bwRels = filestream("", "rels.dat");
-        var bwRelsId = filestream("", "rels.id.dat");
-        var bwRelsOsmId = filestream("", "rels.osm_id.dat");
+        var bwRelsOffsets = filestream("", "rels.offsets");
+        var bwRelsOsmId = filestream("", "osm_ids.rels.dat");
         foreach (var el in PbfUtil.ReadPbf(pbfFilename, relsLast: true))
         {
             if (el is Node node)
@@ -45,7 +45,7 @@ public class PbfConverter
             {
                 var wayId = (uint)(wayRenumber.Count + 1);
                 wayRenumber.Add(way.Id.Value, wayId);
-                bwWaysId.Write7BitEncodedInt64(bwWays.Position - prevWayIdPos); // to be loaded into RAM during usage
+                bwWaysOffsets.Write7BitEncodedInt64(bwWays.Position - prevWayIdPos); // to be loaded into RAM during usage
                 prevWayIdPos = bwWays.Position;
                 bwWays.Write7BitEncodedInt(way.Nodes.Length);
                 int prevLat = 0, prevLon = 0;
@@ -73,7 +73,7 @@ public class PbfConverter
             {
                 var relId = (uint)(relRenumber.Count + 1);
                 relRenumber.Add(rel.Id.Value, relId);
-                bwRelsId.Write7BitEncodedInt64(bwRels.Position - prevRelIdPos); // to be loaded into RAM during usage
+                bwRelsOffsets.Write7BitEncodedInt64(bwRels.Position - prevRelIdPos); // to be loaded into RAM during usage
                 prevRelIdPos = bwRels.Position;
                 bwRels.Write7BitEncodedInt(rel.Members.Length);
                 foreach (var m in rel.Members)
@@ -130,15 +130,15 @@ public class PbfConverter
                         otherValues.Add(tagVal);
                     else
                     {
-                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.{tags[tagKey][tagVal].Count}.qtr");
-                        bw.Write(kind.ToUpper().PadRight(4, ' ').ToCharArray());
+                        var bw = filestream(tagKey, $"{kind}.tag.{tagKey}={tagVal}.qtr");
+                        bw.Write($"{kind.ToUpper(),-4}:1:{tags[tagKey][tagVal].Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
                         saveQuadtree(bw, tags[tagKey][tagVal], depthLimit, itemsLimit, filter, writer);
                     }
                 }
                 var remainingTags = otherValues.SelectMany(tagValue => tags[tagKey][tagValue].Select(n => (tagValue, n))).ToList();
-                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.qtr");
-                bw2.Write(kind.ToUpper().PadRight(4, ' ').ToCharArray());
-                var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.{remainingTags.Count}.strings"));
+                var bw2 = filestream(tagKey, $"{kind}.tag.{tagKey}.qtr");
+                bw2.Write($"{kind.ToUpper(),-4}:1:{remainingTags.Count.ClipMax(9999999),7}:".ToCharArray()); // length = 15
+                var strings = remainingTags.Count < 500 ? null : new StringsCacher(() => filestream(tagKey, $"{kind}.tag.{tagKey}.strings"));
                 saveQuadtree(bw2, remainingTags, depthLimit, itemsLimit,
                     (t, lat, lon, mask) => filter(t.n, lat, lon, mask),
                     (t, bw) =>
@@ -201,7 +201,7 @@ internal class StringsCacher
             if (_bwStrings == null)
             {
                 _bwStrings = _getWriter();
-                _bwStrings.Write("STRN".ToCharArray());
+                _bwStrings.Write("STRN:1:       :".ToCharArray()); // length = 15; todo: backpatch count
             }
             result = _bwStrings.Position;
             _bwStrings.Write(value);
